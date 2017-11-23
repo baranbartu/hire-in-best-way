@@ -2,8 +2,6 @@
 
 (RESTful API, Threads/Greenlets, Distributed Task Queue (Celery))
 
-## 1- RESTful API (microservice)
-
 ### Prerequisites
 
 ```
@@ -18,6 +16,8 @@
 ```
 3- One Amazon EC2 instance to deploy API
 ```
+
+## 1- RESTful API (microservice)
 
 ### Design
 
@@ -37,4 +37,45 @@ RoundRobin
 Async Workers, and trying to use async clients for I/O operations like querying
 PostgreSQL or Redis, thus we can be able to handle thousand of requests at a
 time. Also we need to observe the bottlenecks on the CPU, always be careful to
-prevent GIL disaster.
+prevent GIL disasters.
+
+## 2- Threads/Greenlets
+
+### Design
+* I am assuming that this service will be calling at the end of the days
+* I would try to code my service as I/O bound, not CPU. Of course CPU will be
+  used in any way, but i would try to find C/Rust bindings for python to prevent GIL
+* Because Threads or Greenlets will be executing on the one process and one
+  sharing CPU core.
+* I would prefer to choose Greenlets because threads are expensive in terms of
+  virtual memory and kernel overhead because they are still OS threads, not
+  native python threads. But greenlets will be working their own context and
+  they will provide us the concurrency. If most of the things would be I/O
+  bound, then we would get best efficiency.
+* I am again assuming a bulk job creation at a day (100, 1000 or more), parsing
+  some csv files or ETL task from another database.
+* I would write a create_job, distribute_budget and store_result functions.
+* After parsing the bulk result i would spawn a greenlet and each function
+  would callback(spawn another greenlet) to other functions respectively. And
+  it makes our service quite fast.
+
+
+## 3- Distributed Task Queue (Celery)
+
+We can use either Redis or RabbitMQ as a message broker.
+
+### Design
+
+* I am assuming we have an ETL job for the bulk jobs and a task will be spawn
+  for making the necessary duties for each job.
+* We have three task: create_job, distribute_budget and store_result
+* Also we have three separated message queues and three workers which consuming
+  regarding tasks from their queues.
+* Each create_job task will spawn distibute_budget subtask and each
+  distribute_budget task will spawn store_results subtask.
+* We can benchmarking for the 3 tasks to measure CPU bottlenecks using cProfile
+  or something else. If one task's CPU usage more than the others, then we
+  can tune process counts on the workers according to CPU load.
+* For example: We have 16 core server and the create_job function uses %50 of
+  CPU resource. Then we can give 8 process to create_job function and give 4
+  processes for the other two subtasks.
