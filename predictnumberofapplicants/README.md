@@ -18,9 +18,12 @@ This will generate prediction_results.csv under data/
 
 ## Also can be called
 ```
-pnoa train --file=<path to training file>
+source venv/bin/activate
 ```
 
+```
+pnoa train --file=<path to training file>
+```
 ```
 pnoa predict --file=<path to test file>
 ```
