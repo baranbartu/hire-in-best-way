@@ -1,12 +1,16 @@
-createvirtualenv:
-	virtualenv --python=`which python2.7` venv
+.PHONY: bootstrap
 
-activate:
-	source venv/bin/activate
+bootstrap: _virtualenv
+	venv/bin/pip install -e .
+	make train
 
-install:
-	pip install .
+_virtualenv: 
+	virtualenv venv
+	venv/bin/pip install --upgrade pip
+	venv/bin/pip install --upgrade setuptools
 
+train:
+	sh -c '. venv/bin/activate; pnoa train'
 
-.PHONY: createvirtualenv activate install
-
+predict:
+	sh -c '. venv/bin/activate; pnoa predict'
