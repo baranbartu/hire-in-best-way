@@ -1,12 +1,12 @@
-install:
+createvirtualenv:
 	virtualenv --python=`which python2.7` venv
 
 activate:
 	source venv/bin/activate
 
-test:
-	pwd
+install:
+	pip install .
 
 
-.PHONY: install activate test
+.PHONY: createvirtualenv activate install
 

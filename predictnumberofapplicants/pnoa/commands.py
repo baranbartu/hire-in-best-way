@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 from sklearn.linear_model import LinearRegression
 
-from pnoa.cli import core 
+from pnoa import core 
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 TRAINING_FILE = 'data/training.csv'
