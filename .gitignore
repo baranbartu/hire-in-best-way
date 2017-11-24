@@ -9,6 +9,9 @@ __pycache__/
 # pickle files
 *.pckl
 
+# prediction result file
+predictnumberofapplicants/data/prediction_results.csv
+
 # Distribution / packaging
 .Python
 env/

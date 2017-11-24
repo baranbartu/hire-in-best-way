@@ -1,4 +1,3 @@
-import os
 import pickle
 import pandas as pd
 
@@ -10,32 +9,24 @@ from sklearn.metrics import mean_squared_error
 from sklearn.linear_model import LinearRegression
 
 from pnoa import core 
-
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-TRAINING_FILE = 'data/training.csv'
-REGRESSION_MODEL_FILE = 'data/regression_model.pckl'
-CITIES_FILE = 'data/cities.pckl'
-TEST_FILE = 'data/test.csv'
-COLUMNS_TRAINING = ['job_type', 'hours', 'city', 'salary', 'applications']
-COLUMNS_TEST = ['job_type', 'hours', 'city', 'salary']
-PREDICTION_RESULTS_FILE = 'data/prediction_results.csv'
-
+from pnoa import config
 
 @core.command
-@core.argument('--file', default=TRAINING_FILE)
+@core.argument('--file', default=config.TRAINING_FILE)
 def train(args):
     """
     build a regression model and store it in a file.
     """
     try:
         df = pd.read_csv(
-            args.file, index_col=False, header=0, usecols=COLUMNS_TRAINING)
+            args.file, index_col=False,
+            header=0, usecols=config.COLUMNS_TRAINING)
     except IOError:
         raise ValueError('Please provide a correct file path')
 
     # get only necessary columns
     df = pd.read_csv(
-        TRAINING_FILE, index_col=False, header=0, usecols=COLUMNS_TRAINING)
+        args.file, index_col=False, header=0, usecols=config.COLUMNS_TRAINING)
 
     # We need to find the real city names to replace with a int identifier
     col_city = df[['city']]
@@ -58,9 +49,9 @@ def train(args):
     regression_model.fit(x_train, y_train)
 
     # store predictive model in a file
-    pickle.dump(regression_model, open(REGRESSION_MODEL_FILE, 'wb'))
+    pickle.dump(regression_model, open(config.REGRESSION_MODEL_FILE, 'wb'))
     # store cities to get cty index for prediction calls
-    pickle.dump(cities, open(CITIES_FILE, 'wb'))
+    pickle.dump(cities, open(config.CITIES_FILE, 'wb'))
 
     # information about the success of model
     regression_score = regression_model.score(x_test, y_test)
@@ -73,10 +64,11 @@ def train(args):
 
 
 @core.command
-@core.argument('--file', default=TEST_FILE)
+@core.argument('--file', default=config.TEST_FILE)
 def predict(args):
     try:
-        regression_model = pickle.load(open(REGRESSION_MODEL_FILE, 'rb'))
+        regression_model = pickle.load(
+            open(config.REGRESSION_MODEL_FILE, 'rb'))
     except IOError:
         raise ValueError(
             'Please make sure that regression_model is ready. `pnoa train`')
@@ -102,7 +94,7 @@ def normalize_df(df, cities=None):
     """
     if not cities:
         try:
-            cities = pickle.load(open(CITIES_FILE, 'rb'))
+            cities = pickle.load(open(config.CITIES_FILE, 'rb'))
         except IOError:
             raise ValueError(
                 'Please make sure that cities is ready. `pnoa train`')
@@ -128,7 +120,7 @@ def write_prediction_results(col_job_id, predicted_values_nparr):
 
     # make dataframe from result matrix
     df = pd.DataFrame.from_records(result, columns=['job_id', 'prediction'])
-    df.to_csv(PREDICTION_RESULTS_FILE, sep=',', encoding='utf-8')
+    df.to_csv(config.PREDICTION_RESULTS_FILE, sep=',', encoding='utf-8')
 
 
 def load_commands():
