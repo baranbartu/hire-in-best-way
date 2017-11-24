@@ -1,3 +1,4 @@
+import os
 import pickle
 import pandas as pd
 
@@ -10,20 +11,25 @@ from sklearn.linear_model import LinearRegression
 
 from pnoa.cli import core 
 
-
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 TRAINING_FILE = 'data/training.csv'
 REGRESSION_MODEL_FILE = 'data/regression_model.pckl'
 CITIES_FILE = 'data/cities.pckl'
 TEST_FILE = 'data/test.csv'
 COLUMNS_TRAINING = ['job_type', 'hours', 'city', 'salary', 'applications']
 COLUMNS_TEST = ['job_type', 'hours', 'city', 'salary']
+PREDICTION_RESULTS_FILE = 'data/prediction_results.csv'
+
 
 @core.command
 @core.argument('--file', default=TRAINING_FILE)
 def train(args):
+    """
+    build a regression model and store it in a file.
+    """
     try:
         df = pd.read_csv(
-            TRAINING_FILE, index_col=False, header=0, usecols=COLUMNS_TRAINING)
+            args.file, index_col=False, header=0, usecols=COLUMNS_TRAINING)
     except IOError:
         raise ValueError('Please provide a correct file path')
 
@@ -31,12 +37,13 @@ def train(args):
     df = pd.read_csv(
         TRAINING_FILE, index_col=False, header=0, usecols=COLUMNS_TRAINING)
 
-    # We need to find real city names to replace with a int identifier
+    # We need to find the real city names to replace with a int identifier
     col_city = df[['city']]
     cities_iterator = chain(*col_city.values.tolist())
     city_count_mapping = Counter(cities_iterator)
     cities = city_count_mapping.keys()
 
+    # all columns should be int, float etc.
     df = normalize_df(df, cities=cities)
 
     # split into two dataframe
@@ -74,19 +81,25 @@ def predict(args):
         raise ValueError(
             'Please make sure that regression_model is ready. `pnoa train`')
 
-    test_file = args.file
-    original_test_df = pd.read_csv(
-        test_file, index_col=False, header=0, usecols=COLUMNS_TEST)
-    test_df = normalize_df(original_test_df)
+    test_df = pd.read_csv(args.file, index_col=False, header=0)
+    # pop job_id column from the original test df for making pairs after
+    # prediction
+    col_job_id = test_df[['job_id']]
+    test_df = test_df.drop('job_id', axis=1)
+    test_df = normalize_df(test_df)
 
     # predict new values
-    predicted_values = regression_model.predict(test_df)
-    col_job_id = original_test_df[['job_id']]
-    __import__('ipdb').set_trace()
+    predicted_values_nparr = regression_model.predict(test_df)
+
+    # write results into a csv
+    write_prediction_results(col_job_id, predicted_values_nparr)
 
 
 
 def normalize_df(df, cities=None):
+    """
+    use regarding index value instead of using city name
+    """
     if not cities:
         try:
             cities = pickle.load(open(CITIES_FILE, 'rb'))
@@ -97,10 +110,31 @@ def normalize_df(df, cities=None):
     df['city'] = df['city'].replace(
         {city: cities.index(city) for city in cities})
     return df
-    __import__('ipdb').set_trace()
+
+
+def write_prediction_results(col_job_id, predicted_values_nparr):
+    """
+    chain and zip job_id column and predicted values
+    """
+    job_ids_nparr = col_job_id.values
+
+    # keep them as an iterator to reduce memory usage
+    # also normalize value casting integer
+    predicted_values_iterator = (
+        int(pv) for pv in chain(*predicted_values_nparr.tolist()))
+    job_ids_iterator = chain(*job_ids_nparr.tolist())
+    # zip job_id and the predicted result
+    result = zip(job_ids_iterator, predicted_values_iterator)
+
+    # make dataframe from result matrix
+    df = pd.DataFrame.from_records(result, columns=['job_id', 'prediction'])
+    df.to_csv(PREDICTION_RESULTS_FILE, sep=',', encoding='utf-8')
 
 
 def load_commands():
+    """
+    load all functions at runtime and return all "Command" instances as list
+    """
     import commands
 
     attrs = set(dir(commands))
