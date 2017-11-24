@@ -2,17 +2,25 @@
 
 pnoa: means -Predict Number Of Applicants-. pnoa will be used also for CLI tool
 
-[comment]: <> (Build a predictive model training the system using training.csv and call regarding commands)
+## Installation
+```
+make
+```
+This will create a virtualenv with "venv" name, install pnoa package 
+in editable mode(now pnoa can be called under this virtualenv as cli) 
+and execute train function to be able to store regression_model.pckl under data/
  
+## Predict
 ```
-pnoa train --file=data/training.csv
+make predict
+```
+This will generate prediction_results.csv under data/
+
+## Also can be called
+```
+pnoa train --file=<path to training file>
 ```
 
 ```
-pnoa predict --file=data/test.csv
+pnoa predict --file=<path to test file>
 ```
-
-```
-pnoa predict --job_type=<> --hours=<> --city=<> --salary=<>
-```
-
